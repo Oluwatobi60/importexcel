@@ -1,0 +1,8 @@
+{
+    "name": "user/import-excel",
+    "description": "A basic spreadsheet",
+    "type": "composer-plugin",
+    "require": {
+        "phpoffice/phpspreadsheet": "2.0.0"
+    }
+}
