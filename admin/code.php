@@ -75,40 +75,25 @@ if(isset($_POST['save_excel_data'])){
             
             
 
-            // Sanitize input to prevent SQL injection
-            $fullname = mysqli_real_escape_string($conn, $fullname);
-            $qualification = mysqli_real_escape_string($conn, $qualification);
-            $designation = mysqli_real_escape_string($conn, $designation);
-            $email = mysqli_real_escape_string($conn, $email);
-            $acct_no = mysqli_real_escape_string($conn, $acct_no);
-            $bank = mysqli_real_escape_string($conn, $bank);
-            $total = mysqli_real_escape_string($conn, $total);
-            $soc = mysqli_real_escape_string($conn, $soc);
-            $tax = mysqli_real_escape_string($conn, $tax);
-            $month_hand  = mysqli_real_escape_string($conn, $month_hand );
-            $late = mysqli_real_escape_string($conn, $late);
-            $absent_other = mysqli_real_escape_string($conn, $absent_other);
-            $loan = mysqli_real_escape_string($conn, $loan);
-            $food = mysqli_real_escape_string($conn, $food);
-            $grand = mysqli_real_escape_string($conn, $grand);
-            $remarks = mysqli_real_escape_string($conn, $remarks);
-        
+      // Use prepared statements with PDO for security
+      $sql_check = "SELECT COUNT(*) FROM tb_data WHERE month = ? AND fullnames = ?";
+      $stmt_check = $conn->prepare($sql_check);
+      $stmt_check->execute([$month, $fullname]);
+      $exists = $stmt_check->fetchColumn();
 
-        $sql_check = "SELECT * FROM tb_data WHERE month = '$month' AND fullnames = '$fullname'";
-       $result_check = mysqli_query($conn,$sql_check);
-
-       if(mysqli_num_rows($result_check) > 0){
-            // If a record with the same email and month already exists, flag error and skip insertion
-           $_SESSION['message'] = "Data is already exist";
-           header('Location: index.php');
-          exit(0);
-       }else{
-
-            $sql = "INSERT INTO tb_data (fullnames, qualification, designation, email, acct_no, bank, total, soc, tax, month_hand, late, absent_other, loan, food_cooperative, grand_balance, remarks, year, month) VALUES ('$fullname', '$qualification' ,'$designation','$email','$acct_no','$bank', '$total', '$soc', '$tax', '$month_hand', '$late', '$absent_other', '$loan', '$food', '$grand', '$remarks', '$year', '$month')";
-
-            $result = mysqli_query($conn,$sql);
-            $msg = true;
-       } //stop here
+      if($exists > 0){
+        // If a record with the same name and month already exists, flag error and skip insertion
+        $_SESSION['message'] = "Data is already exist";
+        header('Location: index.php');
+        exit(0);
+      } else {
+        $sql = "INSERT INTO tb_data (fullnames, qualification, designation, email, acct_no, bank, total, soc, tax, month_hand, late, absent_other, loan, food_cooperative, grand_balance, remarks, year, month) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $result = $stmt->execute([
+          $fullname, $qualification, $designation, $email, $acct_no, $bank, $total, $soc, $tax, $month_hand, $late, $absent_other, $loan, $food, $grand, $remarks, $year, $month
+        ]);
+        $msg = true;
+      }
       }
           else{
             $count = "1";

@@ -34,29 +34,18 @@ if (!isset($_GET["token"])) {
 $token = $_GET["token"];
 $token_hash = hash("sha256", $token);
 
-// Prepare the SQL statement to prevent SQL injection
-$stmt = $conn->prepare("SELECT * FROM users WHERE reset_token_hash = ?");
-$stmt->bind_param("s", $token_hash);
-
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result === false) {
-    echo "An error occurred while executing the query.";
-    exit;
-}
-
-// Check if the token exists in the database
-if ($result->num_rows === 0) {
-    echo "Token not found!";
-} else {
-    $user = $result->fetch_assoc();
-
-    // Check if the token has expired
-    if (strtotime($user["reset_token_expires_at"]) <= time()) {
-        echo "Token has expired";
+try {
+    $stmt = $conn->prepare("SELECT * FROM users WHERE reset_token_hash = ?");
+    $stmt->execute([$token_hash]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$user) {
+        echo "Token not found!";
     } else {
-        ?>
+        // Check if the token has expired
+        if (strtotime($user["reset_token_expires_at"]) <= time()) {
+            echo "Token has expired";
+        } else {
+            ?>
         
         <!DOCTYPE html>
 <html lang="en">
@@ -97,12 +86,13 @@ if ($result->num_rows === 0) {
 </body>
 </html>
         
-        <?php
-    }
-}
 
-$stmt->close();
-$conn->close();
+            <?php
+        }
+    }
+} catch (PDOException $e) {
+    echo "An error occurred while executing the query.";
+}
 ?>
 
 

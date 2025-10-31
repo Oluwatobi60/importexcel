@@ -1,6 +1,4 @@
 <?php
-
-
 require 'config.php'; 
 session_start();
 
@@ -10,60 +8,55 @@ if(isset($_POST["sub"])){
     $password = $_POST["password"];
 
     // Check if the login attempt is for a user
-    $user_result = mysqli_query($conn, "SELECT * FROM users WHERE email='$username'") or die("Select error for users");
-    $user_row = mysqli_fetch_assoc($user_result);
+  // User login with PDO
+  $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+  $stmt->execute([$username]);
+  $user_row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if(mysqli_num_rows($user_result) > 0){
-       // Verify the hashed password
-          if(password_verify($password, $user_row["pass"])) {
-            $_SESSION["login"] = true;
-            $_SESSION["id"] = $user_row["id"];
+  if($user_row){
+    // Verify the hashed password
+    if(password_verify($password, $user_row["pass"])) {
+      $_SESSION["login"] = true;
+      $_SESSION["id"] = $user_row["id"];
 
-              // Check if "Remember Me" checkbox is checked
-              if(isset($_POST['remember'])){
-                  // Set a cookie to remember the user's login status
-                  setcookie("remember_user", $username, time() + (86400 * 30), '/'); // Set cookie for 30 days
-                  setcookie("remember",$remember,time() + 86400 * 30);
-              }
-              else{
-                setcookie("remember_user","", time() - 86400);
-                setcookie("remember","", time() - 86400);
-              }
-            header("Location: welcome.php");
-            exit();
-        } else {
-            echo "<script>alert('Wrong Password') </script>";
-        }
+      // Check if "Remember Me" checkbox is checked
+      if(isset($_POST['remember'])){
+        setcookie("remember_user", $username, time() + (86400 * 30), '/');
+        setcookie("remember", $remember, time() + 86400 * 30);
+      } else {
+        setcookie("remember_user", "", time() - 86400);
+        setcookie("remember", "", time() - 86400);
+      }
+      header("Location: welcome.php");
+      exit();
     } else {
-        // If user login fails, check if it's an admin login
-        $admin_result = mysqli_query($conn, "SELECT * FROM admin_table WHERE username='$username'") or die("Select error for admins");
-        $admin_row = mysqli_fetch_assoc($admin_result);
-
-        if(mysqli_num_rows($admin_result) > 0){
-            if($password == $admin_row["password"] ){
-                $_SESSION["login"] = true;
-                $_SESSION["admin_id"] = $admin_row["admin_id"];
-
-                 // Check if "Remember Me" checkbox is checked
-              if(isset($_POST['remember'])){
-                // Set a cookie to remember the user's login status
-                setcookie('remember_admin', $username, time() + (86400 * 30), '/'); // Set cookie for 30 days
-            }
-                header("Location: admin/index.php");
-                exit();
-            } else {
-                echo "<script>alert('Wrong Password') </script>";
-            }
-        } else {
-            echo "<script>alert('User Not Registered') </script>";
-        }
+      echo "<script>alert('Wrong Password') </script>";
     }
+  } else {
+    // Admin login with PDO
+    $stmt = $conn->prepare("SELECT * FROM admin_table WHERE username = ?");
+    $stmt->execute([$username]);
+    $admin_row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if($admin_row){
+      if($password == $admin_row["password"] ){
+        $_SESSION["login"] = true;
+        $_SESSION["admin_id"] = $admin_row["admin_id"];
+
+        if(isset($_POST['remember'])){
+          setcookie('remember_admin', $username, time() + (86400 * 30), '/');
+        }
+        header("Location: admin/index.php");
+        exit();
+      } else {
+        echo "<script>alert('Wrong Password') </script>";
+      }
+    } else {
+      echo "<script>alert('User Not Registered') </script>";
+    }
+  }
 }
 ?>
-
-
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -77,25 +70,108 @@ if(isset($_POST["sub"])){
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 
   <link rel="stylesheet" href="style1.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+      min-height: 100vh;
+    }
+    .box-area {
+      border-radius: 1.5rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.04);
+      background: #fff;
+      overflow: hidden;
+    }
+    .left-box {
+      background: linear-gradient(135deg, #185a9d 0%, #43cea2 100%);
+      color: #fff;
+      border-radius: 1.5rem 0 0 1.5rem;
+      min-height: 400px;
+    }
+    .left-box .featured-image img {
+      max-width: 220px;
+      border-radius: 1rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+    }
+    .right-box {
+      border-radius: 0 1.5rem 1.5rem 0;
+      min-height: 400px;
+      background: #f8f9fa;
+    }
+    .header-text h2 {
+      font-weight: 700;
+      color: #185a9d;
+    }
+    .header-text p {
+      color: #555;
+    }
+    .form-control, .form-select {
+      border-radius: 0.75rem;
+      font-size: 1rem;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%);
+      border: none;
+      font-weight: 600;
+      letter-spacing: 1px;
+      border-radius: 0.75rem;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(90deg, #185a9d 0%, #43cea2 100%);
+    }
+    .forgot a {
+      color: #185a9d;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .forgot a:hover {
+      text-decoration: underline;
+    }
+    .row .form-check-label {
+      color: #555;
+    }
+    .row small a {
+      color: #43cea2;
+      font-weight: 600;
+    }
+    .row small a:hover {
+      color: #185a9d;
+      text-decoration: underline;
+    }
+    @media (max-width: 767px) {
+      .left-box, .right-box {
+        border-radius: 1.5rem !important;
+      }
+      .box-area {
+        border-radius: 1.5rem !important;
+      }
+    }
+  </style>
 </head>
 <body>
 
 <!------------Main Container-------------->
   <div class="container d-flex justify-content-center align-items-center min-vh-100">
+    <?php
+      if (isset($_SESSION['reset_message'])) {
+        $resetMsg = $_SESSION['reset_message'];
+        unset($_SESSION['reset_message']);
+        echo "<script>alert('" . addslashes($resetMsg) . "');</script>";
+      }
+    ?>
 
   <!-------------- Login Container-------------->
-    <div class="row border rounded-5 p-3 bg-white shadow box-area">
+  <div class="row box-area p-0">
       <!-------------Left Box------------------>
-      <div class="col-md-6 rounded-4 d-flex justify-content-center align-items-center flex-column left-box" style="background: #103cbe;">
+  <div class="col-md-6 d-flex justify-content-center align-items-center flex-column left-box p-4">
           <div class="featured-image mb-3">
-            <img src="image/login.png" class="img-fluid" style="width: 250px;">
+            <img src="image/login.png" class="img-fluid" alt="Login Illustration">
           </div>
-          <p class="text-white fs-2" style="font-family: 'Courier New', Courier, monospace; font-weight:600;">Be Verified</p>
-          <small class="text-white text-wrap text-center" style="width:17rem; font-family:'Courier New', Courier, monospace">Login to check your salary breakdown.</small>
+          <p class="fs-2 fw-bold mb-2" style="font-family: 'Montserrat', sans-serif;">Be Verified</p>
+          <small class="text-white text-wrap text-center mb-2" style="width:17rem; font-family:'Montserrat', sans-serif;">Login to check your salary breakdown.</small>
       </div>
 
       <!----------Right BOx------------------->
-      <div class="col-md-6 right-box">
+  <div class="col-md-6 right-box p-4">
             <div class="row align-items-center">
                   <div class="header-text mb-4">
                         <h2>Hello, Again</h2>

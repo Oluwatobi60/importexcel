@@ -16,24 +16,21 @@ if(isset($_POST['sub'])){
     /*   $add = $_POST['address']; */
    
 
-   $sql = "select * from users where email='$email'";
-   $result = mysqli_query($conn, $sql);
-   $count_email = mysqli_num_rows($result);
+   $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+   $stmt->execute([$email]);
+   $count_email = $stmt->rowCount();
 
-   if($count_email==0){
-    if($password==$cpass){
-     $hash = password_hash($password, PASSWORD_DEFAULT); 
-        $sql = "insert into users(fullnames, email, pass, phone) values('$fullname', '$email', '$hash', '$phone')";
-        $result = mysqli_query($conn, $sql);
-        header("Location: index.php");
-        echo "<script>alert('Registration Successful')</script>";
-    }else{
-      echo "<script>alert('Password do not match!!!')</script>";
-    }
-      
-   }
-   else{
-    echo "<script>alert('Email already exists!!!')</script>";
+   if($count_email == 0){
+     if($password == $cpass){
+       $hash = password_hash($password, PASSWORD_DEFAULT);
+       $stmt = $conn->prepare("INSERT INTO users (fullnames, email, pass, phone) VALUES (?, ?, ?, ?)");
+       $stmt->execute([$fullname, $email, $hash, $phone]);
+       echo "<script>alert('Registration Successful'); window.location='index.php';</script>";
+     } else {
+       echo "<script>alert('Password do not match!!!')</script>";
+     }
+   } else {
+     echo "<script>alert('Email already exists!!!')</script>";
    }
       
 }

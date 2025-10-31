@@ -8,12 +8,13 @@ if(empty($_SESSION["admin_id"])){
   // Redirect to login page if user is not logged in
   header("Location: ../index.php");
   exit;
-}
+} 
 
 
 $id = $_SESSION["admin_id"];
-$result = mysqli_query($conn, "SELECT * FROM admin_table WHERE admin_id=$id");
-$row = mysqli_fetch_assoc($result);
+$stmt = $conn->prepare("SELECT * FROM admin_table WHERE admin_id = ?");
+$stmt->execute([$id]);
+$row = $stmt->fetch();
 
 // Destroy session upon logout
 if(isset($_GET['logout'])) {
@@ -28,15 +29,95 @@ if(isset($_GET['logout'])) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Excel File</title>
+</head>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"  />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
   <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <style>
+    body, .navbar, .card, .table, .btn, .form-control, .form-select, .alert, footer {
+      font-family: 'Montserrat', Arial, Helvetica, sans-serif !important;
+    }
+    h1, h2, h3, h4, h5, h6, .navbar-brand, .card-header {
+      font-family: 'Montserrat', Arial, Helvetica, sans-serif !important;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    body {
+      background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+      min-height: 100vh;
+    }
+    .navbar {
+      border-radius: 0 0 1rem 1rem;
+    }
+    .card {
+      border-radius: 1rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.04);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .btn-primary, .btn-success, .btn-info {
+      border-radius: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%);
+      border: none;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(90deg, #185a9d 0%, #43cea2 100%);
+    }
+    .btn-success {
+      background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%);
+      border: none;
+    }
+    .btn-success:hover {
+      background: linear-gradient(90deg, #185a9d 0%, #43cea2 100%);
+    }
+    .btn-info {
+      background: linear-gradient(90deg, #36d1c4 0%, #5b86e5 100%);
+      border: none;
+      color: #fff;
+    }
+    .btn-info:hover {
+      background: linear-gradient(90deg, #5b86e5 0%, #36d1c4 100%);
+      color: #fff;
+    }
+    .table {
+      background: #fff;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    .alert {
+      border-radius: 0.75rem;
+    }
+    footer {
+      margin-top: 3rem;
+      background: linear-gradient(90deg, #e0eafc 0%, #cfdef3 100%);
+      border-radius: 1rem 1rem 0 0;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+    }
+    .footer-link {
+      color: #0d6efd;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .footer-link:hover {
+      text-decoration: underline;
+      color: #185a9d;
+    }
+  </style>
 </head>
 <body>
 
 
 <!-- Navbar  -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
       <div class="container-fluid">
         <h3 class="navbar-brand" >Welcome</h3>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,7 +127,7 @@ if(isset($_GET['logout'])) {
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item">
-            <h4 class="text-white"><i class="fas fa-user"></i><?php echo $row["username"]; ?></h4>
+            <h4 class="text-white"><i class="fas fa-user"></i><?php echo isset($row["username"]) ? $row["username"] : "Admin"; ?></h4>
             </li>
           </ul>
           <a href="../logout.php"><i class="fas fa-sign-out-alt fs-6"></i>Logout</a>
@@ -54,70 +135,68 @@ if(isset($_GET['logout'])) {
       </div>
 </nav>  <!-- end of navbar-->
 
-<div class="container">
-  <!--Begins of row for buttons-->
-    <div class="row">
-        <div class="col-sm-4 mb-2 mt-2">
-                    <a href="export1.php"><button type="submit" class="btn btn-primary" name="import11">Export To Excel</button></a>
-        </div>
-
-        <div class="col-sm-4 mb-2 mt-2">
-        <form method="post">
-                    <!-- <a href="export_email.php" > --><button type="submit" class="btn btn-info" name="export" style="color:#fff;">Exract Staff Email</button><!-- </a> -->
-                    </form>
-        </div>
-    </div><!-- end of row for buttton-->
+<div class="container py-4">
+  <!-- Action Buttons -->
+  <div class="row justify-content-center align-items-center mb-4 g-3">
+    <div class="col-md-4 col-12 mb-2 d-flex justify-content-center">
+      <a href="export1.php" class="btn btn-primary w-100 py-3 fs-5">Export To Excel</a>
+    </div>
+    <div class="col-md-4 col-12 mb-2 d-flex justify-content-center">
+      <form method="post" class="w-100">
+        <button type="submit" class="btn btn-info w-100 py-3 fs-5" name="export">Extract Staff Email</button>
+      </form>
+    </div>
+  </div>
 
     <!-- Extracting users email and name -->
 <?php
 // Step 2: Handle the form submission
 if (isset($_POST['export'])) {
-              // Select email addresses from the users table
-              $sql = "SELECT * FROM users";
-              $result = $conn->query($sql);
+    // Select email addresses from the users table
+    $sql = "SELECT * FROM users";
+    $stmt = $conn->query($sql);
+    $results = $stmt->fetchAll();
 
-              // Step 3: Process the results
-              if ($result->num_rows > 0) {
-                  // Display email addresses
-            ?>
-                <div class="row">
-                  <div class="col-md-6">
-                    <div class="card">
-                      <div class="card-header">
-                        <h2>Staff Email Addresses:</h2>
-                      </div>
-                      <div class="card-body">
-                      <div class="table-responsive">
-                                <table class="table table-dark table-hover">
-                                
-                                <tr>
-                                <th>S/N</th>
-                                <th>NAME</th>
-                                <th>EMAIL</th>
-                              </tr>
-            <?php
-            $i=1;
-                  while ($row = $result->fetch_assoc()) {
-                    // Use isset to avoid undefined array keys
-                    $fullnames = isset($row['fullnames']) ? $row['fullnames'] : 'Unknown';
-                        $email = isset($row['email']) ? $row['email'] : 'No email provided';
-            ?>
-              <tr>
-                <td><?php echo $i++ ; ?></td>
-                <td><?php echo $fullnames;?></td> 
-                <td><?php echo $email;?></td>  
-              </tr>
+    // Step 3: Process the results
+    if (count($results) > 0) {
+        // Display email addresses
+        ?>
+        <div class="row justify-content-center mt-4 mb-5">
+          <div class="col-lg-8">
+            <div class="card border-info shadow mb-4">
+              <div class="card-header bg-info text-white text-center">
+                <h5 class="mb-0">Staff Email Addresses</h5>
+              </div>
+              <div class="card-body p-4">
+                <div class="table-responsive">
+                  <table class="table table-bordered table-striped align-middle text-center">
+                    <thead class="table-light">
+                      <tr>
+                        <th style="width: 10%;">S/N</th>
+                        <th style="width: 45%;">Name</th>
+                        <th style="width: 45%;">Email</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+        <?php
+        $i=1;
+        foreach ($results as $row) {
+            $fullnames = isset($row['fullnames']) ? $row['fullnames'] : 'Unknown';
+            $email = isset($row['email']) ? $row['email'] : 'No email provided';
+        ?>
+          <tr>
+            <td><?php echo $i++ ; ?></td>
+            <td><?php echo $fullnames;?></td> 
+            <td><?php echo $email;?></td>  
+          </tr>
 
-            <?php
-                    /*   echo "Email: " . $row["email"] . "<br>"; */
-                  }
-              } else {
-                  echo "No emails found in the database.";
-              }
-} 
-
-// Close the connection when done
-$conn->close();
+        <?php
+        }
+    } else {
+        echo "No emails found in the database.";
+    }
+}
+// No need to close PDO connection
 ?>
 
 </table>
@@ -149,15 +228,24 @@ $conn->close();
         <?php endif; ?>
 
 
-        <h1>Staff Salary Breakdown System</h1>
+  <!-- <h1 class="display-5 fw-bold mt-4 mb-3">Staff Salary Breakdown System</h1> -->
       </div>
 </div>
 
 
-<form class="" action="code.php" enctype="multipart/form-data" method="POST">
-<input class="form-control form-control-lg mb-2" id="formFileLg" type="file" name="import_file" required value="">
-<button type="submit" class="btn btn-success " name="save_excel_data">Upload</button>
-</form>
+<div class="row justify-content-center mt-4">
+  <div class="col-lg-6">
+    <div class="card shadow border-success">
+      <div class="card-header bg-success text-white">Upload Excel File</div>
+      <div class="card-body">
+        <form action="code.php" enctype="multipart/form-data" method="POST">
+          <input class="form-control form-control-lg mb-3" id="formFileLg" type="file" name="import_file" required>
+          <button type="submit" class="btn btn-success w-100" name="save_excel_data">Upload</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 </div><!-- end of container -->
 
 <footer class="bg-body-tertiary text-center">
@@ -229,9 +317,8 @@ $conn->close();
   <!-- Grid container -->
 
   <!-- Copyright -->
-  <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.05);">
-    © 2024 Copyright:
-    <a class="text-body" href="https://www.webportal.com">SALARY WEB PORTAL</a>
+  <div class="text-center p-3">
+    <span style="font-size: 1.1rem;">&copy; <?php echo date('Y'); ?> <a class="footer-link" href="https://www.webportal.com">SALARY WEB PORTAL</a>. All rights reserved.</span>
   </div>
   <!-- Copyright -->
 </footer>
